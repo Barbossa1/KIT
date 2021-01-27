@@ -1,34 +1,44 @@
 <?php
 
-function loadUsersData($user_ids)
+function getUsers($userIDs)
 {
-    $host = 'localhost';
-    $user = 'root';
-    $password = '123123';
-    $database = 'database';
-
-    $user_ids = explode(',', $user_ids);
-
-    foreach ($user_ids as $user_id) {
-        $db = mysqli_connect($host, $user, $password, $database);
-        $sql = mysqli_query($db, 'SELECT * FROM users WHERE id = ' . $user_id);
-
-        while ($user = $sql->fetch_object()) {
-            $data['user_id'] = $user->name;
-        }
-        mysqli_close($db);
+    $data = array();
+    $connectDB = mysqli_connect(
+        "localhost",
+        "root",
+        "123123",
+        "database"
+    );
+    if (!$connectDB) {
+        throw new Exception("Невозможно получить даныне");
     }
+    if (count($userIDs) != 0) {
+        $sql = mysqli_query(
+            $connectDB,
+            "SELECT `id`,`name` FROM users WHERE id IN (" . implode(",", $userIDs) . ")"
+        );
+        while ($obj = $sql->fetch_object()) {
+            $data[$obj->id] = $obj->name;
+        }
+    }
+    mysqli_close($connectDB);
     return $data;
 }
 
-function render($data)
-{
-    foreach ($data as $user_id => $name) {
-        echo <<<HTML
-   <a href="show_user.php?id=$user_id">$name</a>
-HTML;
+if (isset($_GET['user_ids'])) {
+    $getIDs = explode(',', $_GET['user_ids']);
+    $IDs = array();
+    foreach ($getIDs as $getID) {
+        $IDs[] = intval($getID);
+    }
+    if (count($IDs) != 0) {
+        try {
+            $data = getUsers($IDs);
+            foreach ($data as $userID => $name) {
+                echo "<a href=\"/show_user.php?id=$userID\">$name</a>";
+            }
+        } catch (Exception $e) {
+            echo $e->getMessage();
+        }
     }
 }
-
-$data = loadUsersData($_GET['user_ids']);
-render($data);
